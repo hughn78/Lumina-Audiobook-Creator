@@ -114,6 +114,23 @@ export function createLuminaApp(options: LuminaServerOptions = {}) {
     download.stream.pipe(res);
   });
 
+  app.get('/api', (_req, res) => {
+    res.json({
+      ok: true,
+      endpoints: [
+        '/api/health',
+        '/api/readiness',
+        '/api/voices',
+        '/api/speak',
+        '/api/export-jobs',
+      ],
+    });
+  });
+
+  app.use('/api', (_req, res) => {
+    res.status(404).json({ error: 'API endpoint not found' });
+  });
+
   if (staticDir) {
     app.use(express.static(staticDir));
     app.get(/^(?!\/api).*/, (_req, res) => {

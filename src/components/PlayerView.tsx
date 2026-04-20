@@ -72,7 +72,8 @@ export const PlayerView: React.FC<PlayerViewProps> = ({ bookId, onBack }) => {
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [bookError, setBookError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [narrationQueue, setNarrationQueue] = useState<{ url: string; text: string }[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [voices, setVoices] = useState<string[]>([]);
@@ -179,13 +180,12 @@ export const PlayerView: React.FC<PlayerViewProps> = ({ bookId, onBack }) => {
           status: 'error',
           error: loadError instanceof Error ? loadError.message : 'Unknown error',
         });
-        setError('Could not load Kokoro voices. Is the local audio service running?');
       });
   }, []);
 
   const loadBook = async () => {
     setIsLoading(true);
-    setError(null);
+    setBookError(null);
 
     try {
       const buffer = await getBookFile(bookId);
@@ -260,7 +260,7 @@ export const PlayerView: React.FC<PlayerViewProps> = ({ bookId, onBack }) => {
       }
     } catch (loadError) {
       console.error('Failed to load book:', loadError);
-      setError('Failed to load book content. File may be corrupted or unsupported.');
+      setBookError('Failed to load book content. File may be corrupted or unsupported.');
     } finally {
       setIsLoading(false);
     }
@@ -272,7 +272,7 @@ export const PlayerView: React.FC<PlayerViewProps> = ({ bookId, onBack }) => {
     const chapter = chapters[index];
     const sectionToPlay = chapter?.sections?.[sectionIdx];
     if (!chapter || !sectionToPlay) {
-      setError('Chapter content not found');
+      setActionError('Chapter content not found');
       return;
     }
 
@@ -283,7 +283,7 @@ export const PlayerView: React.FC<PlayerViewProps> = ({ bookId, onBack }) => {
     replaceNarrationQueue([]);
 
     try {
-      setError(null);
+      setActionError(null);
       const blob = await synthesizeSection({
         text: sectionToPlay,
         voice: settings.voice,
@@ -309,7 +309,7 @@ export const PlayerView: React.FC<PlayerViewProps> = ({ bookId, onBack }) => {
           setIsPlaying(true);
         } catch (playError) {
           console.error('Autoplay failed:', playError);
-          setError('Autoplay blocked, tap play to start');
+          setActionError('Autoplay blocked, tap play to start');
         }
       }
 
@@ -322,7 +322,7 @@ export const PlayerView: React.FC<PlayerViewProps> = ({ bookId, onBack }) => {
       });
     } catch (playError: unknown) {
       console.error('Narration failed:', playError);
-      setError(playError instanceof Error ? playError.message : 'Failed to generate narration');
+      setActionError(playError instanceof Error ? playError.message : 'Failed to generate narration');
     } finally {
       setIsGenerating(false);
     }
@@ -333,11 +333,11 @@ export const PlayerView: React.FC<PlayerViewProps> = ({ bookId, onBack }) => {
 
     const allSections = chapters.flatMap((chapter) => chapter.sections);
     if (allSections.length === 0) {
-      setError('No readable sections were found for export.');
+      setActionError('No readable sections were found for export.');
       return;
     }
 
-    setError(null);
+    setActionError(null);
     setUploadProgress({ current: 0, total: allSections.length });
 
     try {
@@ -357,7 +357,7 @@ export const PlayerView: React.FC<PlayerViewProps> = ({ bookId, onBack }) => {
       startExportPolling(job.id);
     } catch (exportError) {
       console.error('Export failed:', exportError);
-      setError(exportError instanceof Error ? exportError.message : 'Failed to export audiobook');
+      setActionError(exportError instanceof Error ? exportError.message : 'Failed to export audiobook');
     } finally {
       setUploadProgress(null);
     }
@@ -373,7 +373,7 @@ export const PlayerView: React.FC<PlayerViewProps> = ({ bookId, onBack }) => {
       stopExportPolling();
     } catch (cancelError) {
       console.error('Failed to cancel export', cancelError);
-      setError(cancelError instanceof Error ? cancelError.message : 'Failed to cancel export');
+      setActionError(cancelError instanceof Error ? cancelError.message : 'Failed to cancel export');
     }
   };
 
@@ -579,11 +579,16 @@ export const PlayerView: React.FC<PlayerViewProps> = ({ bookId, onBack }) => {
               <p className="mt-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
                 {ttsState.ready ? 'Kokoro ready' : `Kokoro ${ttsState.status}`}
               </p>
-              {error && (
+              {bookError ? (
                 <p className="mt-4 text-sm font-bold text-red-500 bg-red-50 py-2 px-4 rounded-full inline-block">
-                  {error}
+                  {bookError}
                 </p>
-              )}
+              ) : null}
+              {actionError ? (
+                <p className="mt-4 text-sm font-bold text-red-500 bg-red-50 py-2 px-4 rounded-full inline-block">
+                  {actionError}
+                </p>
+              ) : null}
               {!ttsState.ready && ttsState.error ? (
                 <p className="mt-3 text-xs text-red-500">{ttsState.error}</p>
               ) : null}

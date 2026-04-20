@@ -1,7 +1,19 @@
 import { ExportFormat, ExportJobSnapshot } from '../types';
 
-const API_BASE = import.meta.env.VITE_LUMINA_API_URL || '';
-const API_PREFIX = API_BASE ? `${API_BASE}/api` : '/api';
+function resolveApiPrefix() {
+  const explicitBase = import.meta.env.VITE_LUMINA_API_URL?.trim();
+  if (explicitBase) {
+    return `${explicitBase.replace(/\/+$/, '')}/api`;
+  }
+
+  if (typeof window !== 'undefined' && /^https?:/i.test(window.location.origin)) {
+    return new URL('/api', window.location.origin).toString().replace(/\/+$/, '');
+  }
+
+  return '/api';
+}
+
+const API_PREFIX = resolveApiPrefix();
 const EXPORT_BATCH_SIZE = 10;
 
 async function handleResponse(response: Response) {
